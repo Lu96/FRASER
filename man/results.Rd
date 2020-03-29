@@ -3,6 +3,7 @@
 \name{results}
 \alias{results}
 \alias{results,FraseRDataSet-method}
+\alias{resultsByGenes}
 \alias{aberrant}
 \title{Extracting results and aberrant splicing events}
 \usage{
@@ -19,12 +20,15 @@ results(x, ...)
   BPPARAM = bpparam()
 )
 
+resultsByGenes(res, geneColumn = "hgncSymbol", method = "BY")
+
 aberrant(
   fds,
   type = currentType(fds),
   padjCutoff = 0.05,
   deltaPsiCutoff = 0.3,
   zScoreCutoff = NA,
+  minCount = 5,
   by = c("none", "sample", "feature"),
   aggregate = FALSE,
   ...
@@ -53,6 +57,14 @@ result}
 \item{psiType}{The psi types for which the results should be retrieved.}
 
 \item{BPPARAM}{The BiocParallel parameter.}
+
+\item{res}{Result as created with \code{results()}}
+
+\item{geneColumn}{The name of the column in \code{mcols(res)} that contains 
+the gene symbols.}
+
+\item{method}{The p.adjust method that is being used to adjust p values per
+sample.}
 
 \item{fds}{FraseRDataSet}
 
@@ -83,10 +95,14 @@ aberrant splicing events based on the given cutoffs.
 # get data, fit and compute p-values and z-scores
 fds <- createTestFraseRDataSet()
 
-# extract results: for this example dataset, padjust cutoff of 0.15 used to
+# extract results: for this example dataset, z score cutoff of 2 is used to
 # get at least one result and show the output
-res <- results(fds, padjCutoff=0.15, zScoreCutoff=NA, deltaPsiCutoff=0.1)
+res <- results(fds, padjCutoff=NA, zScoreCutoff=3, deltaPsiCutoff=0.05)
 res
+
+# aggregate the results by genes (gene symbols need to be annotated first 
+# using annotateRanges() function)
+resultsByGenes(res)
 
 # get aberrant events per sample: on the example data, nothing is aberrant
 # based on the adjusted p-value

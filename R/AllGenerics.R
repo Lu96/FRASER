@@ -387,14 +387,14 @@ setMethod("assayNames", "FraseRDataSet", function(x) {
 #'
 #' @return (Delayed) matrix.
 #' @export
-setMethod("assays", "FraseRDataSet", function(x, ..., withDimnames=TRUE){
+setMethod("assays", "FraseRDataSet", function(x, withDimnames=TRUE, ...){
     return(c(
-        assays(asSE(x), ..., withDimnames=withDimnames),
-        assays(nonSplicedReads(x), ..., withDimnames=withDimnames)
+        assays(asSE(x), withDimnames=withDimnames, ...),
+        assays(nonSplicedReads(x), withDimnames=withDimnames, ...)
     ))
 })
 FraseRDataSet.assays.replace <-
-            function(x, ..., HDF5=TRUE, type=NULL, withDimnames=TRUE, value){
+            function(x, withDimnames=TRUE, HDF5=TRUE, type=NULL, ..., value){
     if(any(names(value) == "")) stop("Name of an assay can not be empty!")
     if(any(duplicated(names(value)))) stop("Assay names need to be unique!")
     if(is.null(type)){
@@ -429,7 +429,7 @@ FraseRDataSet.assays.replace <-
     # assign new assays
     value <- jslots
     x <- callNextMethod()
-    assays(nonSplicedReads(x), ..., withDimnames=withDimnames) <- sslots
+    assays(nonSplicedReads(x), withDimnames=withDimnames, ...) <- sslots
 
     # validate and return
     validObject(x)
@@ -674,7 +674,7 @@ FraseR.results <- function(x, sampleIDs, fdrCutoff, zscoreCutoff, dPsiCutoff,
                 colnames(deltaPsiVals) <- sc
             }
             
-            # create reult table
+            # create result table
             sampleRes <- lapply(sc,
                     resultsSingleSample, gr=gr, pvals=pvals, padjs=padjs,
                     zscores=zscores, psiType=type, psivals=psivals,
@@ -722,6 +722,11 @@ FraseR.results <- function(x, sampleIDs, fdrCutoff, zscoreCutoff, dPsiCutoff,
 #' result
 #' @param psiType The psi types for which the results should be retrieved.
 #' @param BPPARAM The BiocParallel parameter.
+#' @param res Result as created with \code{results()}
+#' @param geneColumn The name of the column in \code{mcols(res)} that contains 
+#'     the gene symbols.   
+#' @param method The p.adjust method that is being used to adjust p values per
+#'     sample.
 #' @param type Splicing type (psi5, psi3 or psiSite)
 #' @param by By default \code{none} which means no grouping. But if 
 #'              \code{sample} or \code{feature} is specified the sum by 
@@ -743,10 +748,14 @@ FraseR.results <- function(x, sampleIDs, fdrCutoff, zscoreCutoff, dPsiCutoff,
 #' # get data, fit and compute p-values and z-scores
 #' fds <- createTestFraseRDataSet()
 #' 
-#' # extract results: for this example dataset, padjust cutoff of 0.15 used to
+#' # extract results: for this example dataset, z score cutoff of 2 is used to
 #' # get at least one result and show the output
-#' res <- results(fds, padjCutoff=0.15, zScoreCutoff=NA, deltaPsiCutoff=0.1)
+#' res <- results(fds, padjCutoff=NA, zScoreCutoff=3, deltaPsiCutoff=0.05)
 #' res
+#' 
+#' # aggregate the results by genes (gene symbols need to be annotated first 
+#' # using annotateRanges() function)
+#' resultsByGenes(res)
 #'
 #' # get aberrant events per sample: on the example data, nothing is aberrant
 #' # based on the adjusted p-value
@@ -775,6 +784,8 @@ setMethod("results", "FraseRDataSet", function(x, sampleIDs=samples(x),
             BPPARAM=BPPARAM)
 })
 
+#' @rdname results
+#' @export
 resultsByGenes <- function(res, geneColumn="hgncSymbol", method="BY"){
     # sort by pvalue
     res <- res[order(res$pValue)]
@@ -843,7 +854,7 @@ mapSeqlevels <- function(fds, style="UCSC", ...){
 #' @rdname results
 #' @export
 aberrant <- function(fds, type=currentType(fds), padjCutoff=0.05,
-                    deltaPsiCutoff=0.3, zScoreCutoff=NA,
+                    deltaPsiCutoff=0.3, zScoreCutoff=NA, minCount=5,
                     by=c("none", "sample", "feature"), aggregate=FALSE, ...){
 
     checkNaAndRange(zScoreCutoff,   min=0, max=Inf, na.ok=TRUE)
@@ -852,6 +863,11 @@ aberrant <- function(fds, type=currentType(fds), padjCutoff=0.05,
     by <- match.arg(by)
 
     dots <- list(...)
+    if("n" %in% names(dots)){
+        n <- dots[['n']]
+    } else {
+        n <- N(fds, type=type)
+    }
     if("zscores" %in% names(dots)){
         zscores <- dots[['zscores']]
     } else {
@@ -866,7 +882,8 @@ aberrant <- function(fds, type=currentType(fds), padjCutoff=0.05,
         dpsi <- dots[['dPsi']]
     } else {
         dpsi <- deltaPsiValue(fds, type=type)
-    }
+    } 
+    
     
     # create cutoff matrix
     goodCutoff <- matrix(TRUE, nrow=nrow(zscores), ncol=ncol(zscores),
@@ -879,6 +896,9 @@ aberrant <- function(fds, type=currentType(fds), padjCutoff=0.05,
     }
     
     # check each cutoff if in use (not NA)
+    if(!is.na(minCount)){
+        goodCutoff <- goodCutoff & as.matrix(n >= minCount)
+    }
     if(!is.na(zScoreCutoff)){
         goodCutoff <- goodCutoff & as.matrix(abs(zscores) > zScoreCutoff)
     }
@@ -888,6 +908,7 @@ aberrant <- function(fds, type=currentType(fds), padjCutoff=0.05,
     if(!is.na(padjCutoff)){
         goodCutoff <- goodCutoff & as.matrix(padj < padjCutoff)
     }
+    goodCutoff[is.na(goodCutoff)] <- FALSE
     
     # check if we should go for aggregation
     # TODO to speed it up we only use any hit within a feature

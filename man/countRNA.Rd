@@ -14,37 +14,39 @@
 countRNAData(
   fds,
   NcpuPerSample = 1,
-  junctionMap = NULL,
   minAnchor = 5,
   recount = FALSE,
   BPPARAM = bpparam(),
   genome = NULL,
+  junctionMap = NULL,
+  filter = TRUE,
+  minExpressionInOneSample = 20,
   countDir = file.path(workingDir(fds), "savedObjects", nameNoSpace(name(fds))),
   ...
 )
 
 getSplitReadCountsForAllSamples(
   fds,
-  NcpuPerSample = 3,
+  NcpuPerSample = 1,
   junctionMap = NULL,
   recount = FALSE,
   BPPARAM = bpparam(),
   genome = NULL,
   countFiles = NULL,
-  outFile = file.path(workingDir(fds), "savedObjects", nameNoSpace(name(fds)),
-    "splitCounts.tsv.gz")
+  outDir = file.path(workingDir(fds), "savedObjects", nameNoSpace(name(fds)),
+    "splitCounts")
 )
 
 getNonSplitReadCountsForAllSamples(
   fds,
   splitCountRanges,
-  NcpuPerSample = 3,
+  NcpuPerSample = 1,
   minAnchor = 5,
   recount = FALSE,
   BPPARAM = bpparam(),
   longRead = TRUE,
-  outFile = file.path(workingDir(fds), "savedObjects", nameNoSpace(name(fds)),
-    "nonSplitCounts.tsv.gz")
+  outDir = file.path(workingDir(fds), "savedObjects", nameNoSpace(name(fds)),
+    "nonSplitCounts")
 )
 
 addCountsToFraseRDataSet(fds, splitCounts, nonSplitCounts)
@@ -70,7 +72,7 @@ countNonSplicedReads(
   sampleID,
   splitCountRanges,
   fds,
-  NcpuPerSample = 3,
+  NcpuPerSample = 1,
   minAnchor = 5,
   recount = FALSE,
   spliceSiteCoords = NULL,
@@ -84,9 +86,6 @@ countNonSplicedReads(
 to configure the parallel backend
 of the internal loop per sample}
 
-\item{junctionMap}{A object or file containing a map of
-all junctions of interest across all samples}
-
 \item{minAnchor}{Minimum overlap around the Donor/Acceptor for
 non spliced reads. Default to 5}
 
@@ -95,6 +94,16 @@ non spliced reads. Default to 5}
 \item{BPPARAM}{the BiocParallel parameters for the parallelization}
 
 \item{genome}{the genome}
+
+\item{junctionMap}{A object or file containing a map of
+all junctions of interest across all samples}
+
+\item{filter}{If TRUE, splice sites of introns with low read support in 
+all samples are not considered when calculating the non-split reads. This 
+helps to speed up the subsequent steps.}
+
+\item{minExpressionInOneSample}{The minimal split read count in at least one 
+sample that is required for an intron to pass the filter.}
 
 \item{countDir}{The directory in which the tsv containing the position and 
 counts of the junctions should be placed.}
@@ -109,11 +118,12 @@ for tsv(.gz) or RDS files containing GRranges objects. The
 order of the individual sample files should correspond to 
 the order of the samples in the fds.}
 
-\item{outFile}{The full path to the output tsv file containing the merged 
-counts. If the given file already exists, this counts from 
-this file will be read in and used in the following (i.e. the 
+\item{outDir}{The full path to the output folder containing the merged 
+counts. If the given folder already exists and stores a 
+SummarizedExperiment object, the counts from this folder will 
+be read in and used in the following (i.e. the 
 reads are not recounted), unless the option recount=TRUE is 
-used. If this file doesn't exist or if recount=TRUE, then it 
+used. If this folder doesn't exist or if recount=TRUE, then it 
 will be created after counting has finished.}
 
 \item{splitCountRanges}{The merged GRanges object containing the positions 
@@ -217,6 +227,6 @@ on the given target (acceptor/donor) regions for a single sample.
 }}
 
 \examples{
-  fds <- countRNAData(fds=createTestFraseRSettings())
+  fds <- countRNAData(createTestFraseRSettings())
 
 }

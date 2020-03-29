@@ -77,12 +77,12 @@ createTestFraseRDataSet <- function(workingDir=tempdir(), rerun=FALSE){
     fds <- createTestFraseRSettings(workingDir)
     
     # count data
-    fds <- countRNAData(fds)
+    fds <- countRNAData(fds, filter=FALSE)
     
     # filter expression
     fds <- calculatePSIValues(fds)
-    fds <- filterExpression(fds, minExpressionInOneSample=5, minDeltaPsi=0, 
-            quantileMinExpression=0)
+    fds <- filterExpressionAndVariability(fds, minExpressionInOneSample=5, 
+            minDeltaPsi=0, quantileMinExpression=0)
     
     # run FraseR pipeline
     fds <- FraseR(fds, q=2, iterations=2)

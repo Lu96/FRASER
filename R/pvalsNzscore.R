@@ -41,20 +41,23 @@ NULL
 calculateZscore <- function(fds, type=currentType(fds), correction="FraseR"){
     currentType(fds) <- type
 
-    counts(fds, type=type, side="other", HDF5=FALSE)      <-
-            as.matrix(counts(fds, type=type, side="other"))
-    counts(fds, type=type, side="ofInterest", HDF5=FALSE) <-
-            as.matrix(counts(fds, type=type, side="ofInterest"))
-
-    logit_mu <- qlogis(as.matrix(predictedMeans(fds)))
+    # counts(fds, type=type, side="other", HDF5=FALSE)      <-
+    #         as.matrix(counts(fds, type=type, side="other"))
+    # counts(fds, type=type, side="ofInterest", HDF5=FALSE) <-
+    #         as.matrix(counts(fds, type=type, side="ofInterest"))
+    
+    logit_mu <- qlogis(predictedMeans(fds))
     logit_psi <- t(x(fds, all=TRUE, noiseAlpha=NULL, center=FALSE))
+    if(is.matrix(logit_psi) && !is.matrix(logit_mu)){
+        logit_mu <- as.matrix(logit_mu)
+    }
 
     logitfc <- logit_psi - logit_mu
 
     # z = ( x - mean ) / sd
     zscores <- (logitfc - rowMeans(logitfc)) / rowSds(logitfc)
 
-    zScores(fds) <- zscores
+    zScores(fds, withDimnames=FALSE) <- zscores
 
     return(fds)
 }
@@ -76,7 +79,7 @@ calculatePvalues <- function(fds, type=currentType(fds),
     
     # make sure its only in-memory data for k and n
     currentType(fds) <- type
-    fds <- putCounts2Memory(fds, type)
+    # fds <- putCounts2Memory(fds, type)
     
     # if method BB is used take the old FraseR code
     if(correction %in% c("BB")){
@@ -90,12 +93,12 @@ calculatePvalues <- function(fds, type=currentType(fds),
     }
     
     index <- getSiteIndex(fds, type=type)
-    mu <- as.matrix(predictedMeans(fds))
+    mu <- predictedMeans(fds)
     rho <- rho(fds)
     alpha <- mu * (1 - rho)/rho
     beta <- (1 - mu) * (1 - rho)/rho
-    k <- as.matrix(K(fds))
-    n <- as.matrix(N(fds))
+    k <- K(fds)
+    n <- N(fds)
     
     # betaBinomial functions get slowed down drastically if
     # N is big (2 mio and bigger). Hence downsample if requested to 1mio max
@@ -116,12 +119,14 @@ calculatePvalues <- function(fds, type=currentType(fds),
         pval_list <- bplapply(seq_row(mu), singlePvalueBetaBinomial,
                 k=k, n=n, mu=mu, rho=rho, BPPARAM=BPPARAM)
         pval <- do.call(rbind, pval_list)
-        dval <- matrix(dbbinom(k, n, alpha, beta), nrow=nrow(k), ncol=ncol(k))
+        dval <- matrix(nrow=nrow(k), ncol=ncol(k), 
+                        dbbinom(as.matrix(k), as.matrix(n), 
+                                as.matrix(alpha), as.matrix(beta)))
         pvals <- 2 * pmin(pval, 1 - pval + dval, 0.5)
         fwer_pval <- bplapply(seq_col(pvals), adjust_FWER_PValues,
                 pvals=pvals, index, BPPARAM=BPPARAM)
         fwer_pvals <- do.call(cbind, fwer_pval)
-        pVals(fds, dist="BetaBinomial") <- fwer_pvals
+        pVals(fds, dist="BetaBinomial", withDimnames=FALSE) <- fwer_pvals
     }
     
     if("binomial" %in% distributions){
@@ -129,15 +134,16 @@ calculatePvalues <- function(fds, type=currentType(fds),
         pval_list <- bplapply(seq_row(mu), singlePvalueBinomial, k=k, n=n,
                 mu=mu, BPPARAM=BPPARAM)
         pval <- do.call(rbind, pval_list)
-        dval <- dbinom(k, n , mu)
+        dval <- dbinom(as.matrix(k), as.matrix(n), as.matrix(mu))
         pvals <- 2 * pmin(pval, 1 - pval + dval, 0.5)
         fwer_pval <- bplapply(seq_col(pvals), adjust_FWER_PValues,
                 pvals=pvals, index, BPPARAM=BPPARAM)
         fwer_pvals <- do.call(cbind, fwer_pval)
-        pVals(fds, dist="Binomial") <- fwer_pvals
+        pVals(fds, dist="Binomial", withDimnames=FALSE) <- fwer_pvals
     }
     
     if("normal" %in% distributions){
+        fds <- putCounts2Memory(fds, type)
         yin <- t(x(fds, all=TRUE, noiseAlpha=NULL, center=FALSE))
         yout <- predictY(fds, type, noiseAlpha=NULL)
         epsilon <- yin - yout
@@ -147,7 +153,7 @@ calculatePvalues <- function(fds, type=currentType(fds),
         fwer_pval <- bplapply(seq_col(pvals), adjust_FWER_PValues,
                 pvals=pvals, index, BPPARAM=BPPARAM)
         fwer_pvals <- do.call(cbind, fwer_pval)
-        pVals(fds, dist="Normal") <- fwer_pvals
+        pVals(fds, dist="Normal", withDimnames=FALSE) <- fwer_pvals
     }
     
     fds
@@ -209,7 +215,7 @@ calculatePadjValues <- function(fds, type=currentType(fds), method="BY"){
         padj <- apply(pvals[idx,], 2, p.adjust, method=method)
         padjDT <- data.table(cbind(i=unique(index), padj), key="i")[J(index)]
         padjDT[,i:=NULL]
-        padjVals(fds, dist=i) <- as.matrix(padjDT)
+        padjVals(fds, dist=i, withDimnames=FALSE) <- as.matrix(padjDT)
     }
     
     return(fds)

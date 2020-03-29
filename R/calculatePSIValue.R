@@ -142,16 +142,16 @@ calculatePSIValuePrimeSite <- function(fds, psiType, overwriteCts, BPPARAM){
     names(psiValues) <- samples(fds)
     
     # merge it and assign it to our object
-    assay(fds, type="j", "psi5") <- 
+    assay(fds, type="j", "psi5", withDimnames=FALSE) <- 
         do.call(cbind, mapply('[', psiValues, TRUE, 3, drop=FALSE))
-    assay(fds, type="j", "psi3") <- 
+    assay(fds, type="j", "psi3", withDimnames=FALSE) <- 
         do.call(cbind, mapply('[', psiValues, TRUE, 4, drop=FALSE))
     
     if(isTRUE(overwriteCts)){
-        assay(fds, type="j", "rawOtherCounts_psi5") <- 
+        assay(fds, type="j", "rawOtherCounts_psi5", withDimnames=FALSE) <- 
             do.call(cbind, bplapply(psiValues, BPPARAM=BPPARAM,
                                     function(x){ x[,1,drop=FALSE] }))
-        assay(fds, type="j", "rawOtherCounts_psi3") <- 
+        assay(fds, type="j", "rawOtherCounts_psi3", withDimnames=FALSE) <- 
             do.call(cbind, bplapply(psiValues, BPPARAM=BPPARAM,
                                     function(x){ x[,2,drop=FALSE] }))
     }
@@ -210,6 +210,8 @@ calculateSitePSIValue <- function(fds, overwriteCts, BPPARAM){
                     && nrow(h5) == nrow(K(fds, type="psiSite"))){
                     
                     return(h5)
+                } else{
+                    h5delete(cacheFile, name=psiH5datasetName)
                 }
             }
             
@@ -246,10 +248,10 @@ calculateSitePSIValue <- function(fds, overwriteCts, BPPARAM){
     names(psiSiteValues) <- samples(fds)
     
     # merge it and assign it to our object
-    assay(fds, type="ss", psiName) <- 
+    assay(fds, type="ss", psiName, withDimnames=FALSE) <- 
         do.call(cbind, mapply('[', psiSiteValues, TRUE, 2, drop=FALSE))
     if(isTRUE(overwriteCts)){
-        assay(fds, type="ss", psiROCName) <- 
+        assay(fds, type="ss", psiROCName, withDimnames=FALSE) <- 
             do.call(cbind, bplapply(psiSiteValues, BPPARAM=BPPARAM, 
                                     function(x) { x[,1,drop=FALSE] }))
     }
@@ -272,8 +274,8 @@ calculateDeltaPsiValue <- function(fds, psiType, assayName){
     deltaPsi  <- psiVal - rowmedian
     
     # rewrite it as a new hdf5 array
-    assays(fds, type=psiType)[[assayName]] <- deltaPsi
-    
+    assay(fds, assayName, type=psiType, withDimnames=FALSE) <- deltaPsi
+
     return(fds)
 }
 

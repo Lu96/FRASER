@@ -101,7 +101,7 @@ x <- function(fds, type=currentType(fds), all=FALSE,
     N <- N(fds, type=type)
 
     # compute logit ratio with pseudocounts
-    x <- as.matrix(t((K + pseudocount())/(N + (2*pseudocount()))))
+    x <- t((K + pseudocount())/(N + (2*pseudocount())))
     x <- qlogis(x)
     
     if(any(is.infinite(x))){
@@ -583,7 +583,7 @@ getPlottingDT <- function(fds, axis=c("row", "col"), type=NULL, result=NULL,
 
     # add aberrant information to it
     aberrantVec <- aberrant(fds, ..., padjVals=dt[,.(padj)],
-        dPsi=dt[,.(deltaPsi)], zscores=dt[,.(zscore)])
+        dPsi=dt[,.(deltaPsi)], zscores=dt[,.(zscore)], n=dt[,.(n)])
     dt[,aberrant:=aberrantVec]
 
     # return object

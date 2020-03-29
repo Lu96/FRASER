@@ -17,11 +17,12 @@
 #' @importFrom pcaMethods pca loadings
 #'
 ### GRange/Experiment/bamFile packages
-#' @importFrom BiocGenerics updateObject counts counts<- strand strand<-
+#' @importFrom BiocGenerics updateObject counts counts<- strand strand<- which
 #' @importFrom GenomicFeatures makeTxDbFromGFF intronsByTranscript genes
 #' @importFrom GenomicAlignments junctions readGAlignments summarizeJunctions
 #' @importFrom SummarizedExperiment assay assay<- assays assays<- assayNames
 #'          colData colData<- rowData rowRanges rowRanges<- SummarizedExperiment
+#'          rbind
 #' @importFrom GenomicRanges findOverlaps granges GRanges GRangesList
 #'          makeGRangesFromDataFrame
 #' @importFrom IRanges subsetByOverlaps from to IRanges ranges
@@ -51,18 +52,18 @@
 ### Data handling
 #'
 #' @importFrom data.table data.table as.data.table is.data.table := fread
-#'          setnames
+#'          setnames 
 #' @importFrom tidyr %>%
 #' @importFrom HDF5Array writeHDF5Array path HDF5Array 
-#'          saveHDF5SummarizedExperiment
+#'          saveHDF5SummarizedExperiment loadHDF5SummarizedExperiment
 #' @importFrom rhdf5 h5ls H5Fopen H5Fclose H5Pclose H5Dget_create_plist
-#'          H5Pget_layout H5Pget_chunk 
+#'          H5Pget_layout H5Pget_chunk h5delete
 #'
 ### P-Value calculation
 #'
 #' @importFrom stats sd rbinom fisher.test na.omit p.adjust ppoints qbeta rnorm
 #'          predict cor cutree dbinom dist hclust lm optim optimize pbinom
-#'          plogis qlogis rlnorm rnbinom pnorm
+#'          rlnorm rnbinom pnorm
 #' @importFrom VGAM rbetabinom vglm Coef pbetabinom pbetabinom.ab betabinomial
 #'          dbetabinom.ab dbetabinom
 #'
@@ -86,7 +87,7 @@
 #' @importFrom GenomeInfoDb keepStandardChromosomes seqlevels<- seqlevels
 #'          seqlengths seqlengths<- seqlevelsStyle<- seqlevelsStyle seqnames 
 #'          seqinfo
-#' @importFrom DelayedArray rowMaxs rowMeans path<- cbind
+#' @importFrom DelayedArray rowMaxs rowMeans path<- cbind plogis qlogis
 #' @importFrom DelayedMatrixStats colSds rowMedians rowSds colMeans2 rowMeans2
 #'          rowQuantiles
 #' @importFrom matrixStats colMaxs colMedians colMins colAnys
@@ -126,7 +127,5 @@ globalVariables(c(".", "J", ".N", ".asDataFrame", "End", "FN", "HTML", "Start",
         "model", "mu", "n", ",nsubset", "o3", "o5", "obsPsi", "os", "pa",
         "padj", "passed", "pByFeature", "pointNr", "predPsi", "psi3", "psi5",
         "psiType", "psiValue", "seqlength", "seqlevel", "Step", "traceNr",
-        "V1", "value", "zscore"),
+        "V1", "value", "zscore", "maxDTheta"),
         package="FRASER")
-
-options("FRASER.pseudoCount"=1)
