@@ -1,44 +1,10 @@
 
-#' 
-#' @title Calculate P-values and Z-scores
-#'  
-#' @description The FraseR package provides functions to calculate nominal and 
-#' and adjusted p-values as well as z-scores after fitting the beta-binomial 
-#' parameters. See Detail and Functions for more information.
-#'  
-#' @details See Functions.
-#' 
-#' @inheritParams fit 
-#' 
-#' @return FraseRDataSet
-#' 
-#' @name pvalZscore
-#' @rdname pvalZscore
-#' 
-#' @examples
-#'   # preprocessing
-#'   fds <- createTestFraseRDataSet()
-#'   
-#'   # nomial p values
-#'   fds <- calculatePvalues(fds, type="psi5")
-#'   head(pVals(fds, type="psi5"))
-#'   
-#'   # donor site adjusted p values
-#'   fds <- calculatePadjValues(fds, type="psi5", method="BY")
-#'   head(padjVals(fds, type="psi5"))
-#'   
-#'   # z scores
-#'   fds <- calculateZscore(fds, type="psi5")
-#'   head(zScores(fds, type="psi5")) 
-#'
-NULL
-
-#' @describeIn pvalZscore This function calculates z-scores based on the 
+#' @describeIn FraseR This function calculates z-scores based on the 
 #' observed and expected logit 
 #' psi.
 #' 
 #' @export
-calculateZscore <- function(fds, type=currentType(fds), correction="FraseR"){
+calculateZscore <- function(fds, type=currentType(fds), implementation="PCA"){
     currentType(fds) <- type
 
     # counts(fds, type=type, side="other", HDF5=FALSE)      <-
@@ -62,8 +28,10 @@ calculateZscore <- function(fds, type=currentType(fds), correction="FraseR"){
     return(fds)
 }
 
-#' @describeIn pvalZscore This function calculates two-sided p-values based on 
-#' the beta-binomial distribution (or binomial or normal if desired).
+#' @describeIn FraseR This function calculates two-sided p-values based on 
+#' the beta-binomial distribution (or binomial or normal if desired). The 
+#' returned p values are already adjusted with Holm's method per donor or 
+#' acceptor site, respectively. 
 #' 
 #' @param distributions The distribution based on which the p-values are 
 #' calculated. Possible are beta-binomial, binomial and normal.
@@ -72,7 +40,7 @@ calculateZscore <- function(fds, type=currentType(fds), correction="FraseR"){
 #' 
 #' @export
 calculatePvalues <- function(fds, type=currentType(fds),
-                    correction="FraseR", BPPARAM=bpparam(),
+                    implementation="PCA", BPPARAM=bpparam(),
                     distributions=c("betabinomial"), capN=5*1e5){
     distributions <- match.arg(distributions, several.ok=TRUE,
             choices=c("betabinomial", "binomial", "normal"))
@@ -82,7 +50,7 @@ calculatePvalues <- function(fds, type=currentType(fds),
     fds <- putCounts2Memory(fds, type)
     
     # if method BB is used take the old FraseR code
-    if(correction %in% c("BB")){
+    if(implementation %in% c("BB")){
         index <- getSiteIndex(fds, type)
         pvals <- getAssayMatrix(fds, "pvalues_BB", type)
         fwer_pval  <- bplapply(seq_col(pvals), adjust_FWER_PValues,
@@ -206,8 +174,8 @@ singlePvalueBinomial <- function(idx, k, n, mu){
     return (pvals)
 }
 
-#' @describeIn pvalZscore This function adjusts the previously calculated 
-#' p-values per donor/acceptor site for multiple testing.
+#' @describeIn FraseR This function adjusts the previously calculated 
+#' p-values per sample for multiple testing.
 #' 
 #' @param method The p.adjust method that should be used. 
 #' 
