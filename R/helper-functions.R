@@ -249,12 +249,10 @@ fraserQQplotPlotly <- function(pvalues, ci=TRUE, reducePoints=FALSE,
 
     # add theoretical trace
     p <- add_trace(p, x=expect, y=expect, mode="lines",
-            line=list(color=col2hex("firebrick1")), name="theoretical-line"
-    )
+            line=list(color="#FF3030"), name="theoretical-line")
     p <- layout(p, title=main,
             xaxis=list(title="Expected -log<sub>10</sub>(<i>P</i>-value)"),
-            yaxis=list(title="Observed -log<sub>10</sub>(<i>P</i>-value)")
-    )
+            yaxis=list(title="Observed -log<sub>10</sub>(<i>P</i>-value)"))
 
     # add confidence interval
     if(ci){
@@ -460,6 +458,7 @@ getHDF5ChunkSize <- function(fds, assayName){
 }
 
 getMaxChunks2Read <- function(fds, assayName, max=15, axis=c("col", "row")){
+    axis <- match.arg(axis)
     if(!any(c("DelayedArray", "DelayedMatrix") %in%
             class(assay(fds, assayName)))){
         if(axis == "col"){
@@ -468,7 +467,6 @@ getMaxChunks2Read <- function(fds, assayName, max=15, axis=c("col", "row")){
         return(ceiling(nrow(assay(fds, assayName))/bpnworkers(bpparam())))
     }
 
-    axis <- match.arg(axis)
     dims <- getHDF5ChunkSize(fds, assayName)
     if(axis == "col"){
         ans <- dims[2]
@@ -532,10 +530,14 @@ plotBasePlot <- function(ggplot, basePlot=FALSE){
 }
 
 getBPParam <- function(worker, tasks=0, ...){
-    ans <- MulticoreParam(workers=min(worker, multicoreWorkers()), tasks, ...)
+    if(worker < 2){
+        return(SerialParam(...))
+    }
+    worker <- min(worker, multicoreWorkers())
     if(.Platform$OS.type != "unix") {
-        ans <- SnowParam(workers=min(worker, multicoreWorkers()), 
-                tasks=tasks, ...)
+        ans <- SnowParam(workers=worker, tasks=tasks, ...)
+    } else {
+        ans <- MulticoreParam(workers=worker, tasks, ...)
     }
     ans
 }

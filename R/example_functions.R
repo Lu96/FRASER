@@ -85,12 +85,10 @@ createTestFraseRDataSet <- function(workingDir=tempdir(), rerun=FALSE){
     fds <- FraseR(fds, q=2, iterations=2)
     
     # annotate it
-    fds <- annotateRanges(fds)
+    suppressMessages({ fds <- annotateRangesWithTxDb(fds) })
     
     # save data for later 
-    dontWriteHDF5(fds) <- FALSE
-    devNULL <- saveFraseRDataSet(fds)
-    dontWriteHDF5(fds) <- TRUE
+    fds <- saveFraseRDataSet(fds)
     
     # return a FraseRDataSet object
     return(fds)

@@ -141,7 +141,9 @@
 #' plotAberrantPerSample(fds, padjCutoff=NA, zScoreCutoff=0.5)
 #' plotVolcano(fds, "sample1", "psi5")
 #' 
-#' res <- results(fds, padjCutoff=NA, zScoreCutoff=0.5, deltaPsiCutoff=0.1)
+#' # for this example a padj cutoff of 1 is used to get results for the small 
+#' # example dataset and be able to show the usage of the plot functions
+#' res <- results(fds, padjCutoff=1, zScoreCutoff=NA, deltaPsiCutoff=NA)
 #' res
 #' plotExpression(fds, result=res[1])
 #' plotQQ(fds, result=res[1])
@@ -370,8 +372,8 @@ plotExpectedVsObservedPsi <- function(fds, type=c("psi5", "psi3", "psiSite"),
                 " (site ", .(as.character(idx)), ")"))))
         } else{
             main <- paste0(ggplotLabelPsi(type, asCharacter=TRUE)[[1]], 
-                           " observed expression vs prediction plot: ", 
-                           dt[,unique(featureID)], " (site ", idx, ")")
+                            " observed expression vs prediction plot: ", 
+                            dt[,unique(featureID)], " (site ", idx, ")")
         }
     }
     
